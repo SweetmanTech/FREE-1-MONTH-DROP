@@ -2,17 +2,17 @@
 pragma solidity ^0.8.15;
 
 import "erc721a/contracts/ERC721A.sol";
-import "../interfaces/IPuzzleDrop.sol";
+import "../interfaces/IDrop721A.sol";
 
-contract PuzzleDrop is ERC721A, IPuzzleDrop {
-    /// @notice Price for Single
-    uint256 public singlePrice = 22200000000000000;
-    /// @notice Price for Single
-    uint256 public bundlePrice = 33300000000000000;
+contract Drop721A is ERC721A, IDrop721A {
+    /// @notice music metadata
+    string internal musicMetadata;
+    /// @notice contract metadata
+    string internal contractMetadata;
     /// @notice Public Sale Start Time
-    uint64 public publicSaleStart = 0;
+    uint256 public publicSaleStart;
     /// @notice Public Sale End Time
-    uint64 public publicSaleEnd = 1692974064;
+    uint256 public publicSaleEnd;
 
     /// @notice Sale is inactive
     error Sale_Inactive();
@@ -21,7 +21,12 @@ contract PuzzleDrop is ERC721A, IPuzzleDrop {
 
     constructor(string memory _name, string memory _symbol)
         ERC721A(_name, _symbol)
-    {}
+    {
+        uint64 ONE_DAY = 60 * 60 * 24;
+        uint64 ONE_MONTH = ONE_DAY * 31;
+        publicSaleStart = block.timestamp;
+        publicSaleEnd = block.timestamp + ONE_MONTH;
+    }
 
     /// @notice Public sale active
     modifier onlyPublicSaleActive() {
@@ -32,13 +37,19 @@ contract PuzzleDrop is ERC721A, IPuzzleDrop {
         _;
     }
 
-    /// @notice Public sale active
-    modifier onlyValidPrice(uint256 _price, uint256 _quantity) {
-        if (msg.value != _price * _quantity) {
-            revert Purchase_WrongPrice(_price * _quantity);
-        }
+    /// @notice This allows the user to purchase a edition edition
+    /// at the given price in the contract.
+    function _purchase(uint256 quantity) internal returns (uint256) {
+        uint256 start = _nextTokenId();
+        _mint(msg.sender, quantity);
 
-        _;
+        emit Sale({
+            to: msg.sender,
+            quantity: quantity,
+            pricePerToken: 0,
+            firstPurchasedTokenId: start
+        });
+        return start;
     }
 
     /// @notice Public sale active
@@ -55,8 +66,7 @@ contract PuzzleDrop is ERC721A, IPuzzleDrop {
             SaleDetails({
                 publicSaleActive: _publicSaleActive(),
                 presaleActive: false,
-                publicSalePrice: singlePrice,
-                publicSaleBundlePrice: bundlePrice,
+                publicSalePrice: 0,
                 publicSaleStart: publicSaleStart,
                 publicSaleEnd: publicSaleEnd,
                 presaleStart: 0,
@@ -64,12 +74,17 @@ contract PuzzleDrop is ERC721A, IPuzzleDrop {
                 presaleMerkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
                 totalMinted: _totalMinted(),
                 maxSupply: 1000000,
-                maxSalePurchasePerAddress: 0
+                maxSalePurchasePerAddress: 1
             });
     }
 
     /// @notice Returns the starting token ID.
     function _startTokenId() internal pure override returns (uint256) {
         return 1;
+    }
+
+    /// @notice Returns song metadata.
+    function songURI() public view returns (string memory) {
+        return musicMetadata;
     }
 }
