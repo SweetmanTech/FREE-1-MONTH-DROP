@@ -7,6 +7,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.3",
     "@openzeppelin/contracts-upgradeable": "^4.7.3",
-    "erc721a": "^4.2.2"
+    "erc721a": "^4.2.2",
+    "thirdweb": "^0.7.3"
   }
 }
