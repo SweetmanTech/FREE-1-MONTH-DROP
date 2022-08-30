@@ -16,16 +16,20 @@ contract Drop721A is ERC721A, IDrop721A {
 
     /// @notice Sale is inactive
     error Sale_Inactive();
-    /// @notice Wrong price for purchase
-    error Purchase_WrongPrice(uint256 correctPrice);
+    /// @notice Too many purchase for address
+    error Purchase_TooManyForAddress();
+    /// @notice NFT sold out
+    error Mint_SoldOut();
 
-    constructor(string memory _name, string memory _symbol)
-        ERC721A(_name, _symbol)
-    {
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        uint256 _publicSaleStart
+    ) ERC721A(_name, _symbol) {
         uint64 ONE_DAY = 60 * 60 * 24;
         uint64 ONE_MONTH = ONE_DAY * 31;
-        publicSaleStart = block.timestamp;
-        publicSaleEnd = block.timestamp + ONE_MONTH;
+        publicSaleStart = _publicSaleStart;
+        publicSaleEnd = _publicSaleStart + ONE_MONTH;
     }
 
     /// @notice Public sale active
@@ -37,9 +41,20 @@ contract Drop721A is ERC721A, IDrop721A {
         _;
     }
 
+    /// @notice Allows user to mint tokens at a quantity
+    modifier canMintTokens(uint256 quantity) {
+        SaleDetails memory config = saleDetails();
+        if (quantity + _totalMinted() > config.maxSupply) {
+            revert Mint_SoldOut();
+        }
+
+        _;
+    }
+
     /// @notice This allows the user to purchase a edition edition
     /// at the given price in the contract.
     function _purchase(uint256 quantity) internal returns (uint256) {
+        _lessThanMaxSalePurchasePerAddress(quantity);
         uint256 start = _nextTokenId();
         _mint(msg.sender, quantity);
 
@@ -59,9 +74,24 @@ contract Drop721A is ERC721A, IDrop721A {
             publicSaleEnd > block.timestamp;
     }
 
+    /// @notice Public sale active
+    function _lessThanMaxSalePurchasePerAddress(uint256 _quantity)
+        internal
+        view
+    {
+        SaleDetails memory config = saleDetails();
+        if (
+            config.maxSalePurchasePerAddress != 0 &&
+            _numberMinted(msg.sender) + _quantity >
+            config.maxSalePurchasePerAddress
+        ) {
+            revert Purchase_TooManyForAddress();
+        }
+    }
+
     /// @notice Sale details
     /// @return IERC721Drop.SaleDetails sale information details
-    function saleDetails() external view returns (SaleDetails memory) {
+    function saleDetails() public view returns (SaleDetails memory) {
         return
             SaleDetails({
                 publicSaleActive: _publicSaleActive(),
@@ -73,7 +103,7 @@ contract Drop721A is ERC721A, IDrop721A {
                 presaleEnd: 0,
                 presaleMerkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
                 totalMinted: _totalMinted(),
-                maxSupply: 1000000,
+                maxSupply: 100,
                 maxSalePurchasePerAddress: 1
             });
     }
@@ -85,6 +115,11 @@ contract Drop721A is ERC721A, IDrop721A {
 
     /// @notice Returns song metadata.
     function songURI() public view returns (string memory) {
+        return musicMetadata;
+    }
+
+    /// @notice Returns the contract metadata.
+    function contractURI() public view returns (string memory) {
         return musicMetadata;
     }
 }

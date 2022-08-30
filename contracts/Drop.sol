@@ -8,8 +8,9 @@ contract Drop is Drop721A {
         string memory _contractName,
         string memory _contractSymbol,
         string memory _musicMetadata,
-        string memory _contractMetadata
-    ) Drop721A(_contractName, _contractSymbol) {
+        string memory _contractMetadata,
+        uint256 _publicSaleStart
+    ) Drop721A(_contractName, _contractSymbol, _publicSaleStart) {
         musicMetadata = _musicMetadata;
         contractMetadata = _contractMetadata;
     }
@@ -19,6 +20,7 @@ contract Drop is Drop721A {
     function purchase(uint256 _quantity)
         external
         onlyPublicSaleActive
+        canMintTokens(_quantity)
         returns (uint256)
     {
         uint256 firstMintedTokenId = _purchase(_quantity);
@@ -35,10 +37,5 @@ contract Drop is Drop721A {
     {
         if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
         return songURI();
-    }
-
-    /// @notice Returns the contract metadata.
-    function contractURI() public view returns (string memory) {
-        return musicMetadata;
     }
 }
